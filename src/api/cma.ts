@@ -43,7 +43,17 @@ function toArtwork(raw: CmaArtwork): Artwork {
     };
 }
 
-export async function searchArtworks(query: string, page: number = 1): Promise<ArtworkList> {
+export type SearchOptions = {
+    query: string;
+    type?: string;
+    page?: number;
+}
+
+export async function searchArtworks({
+    query = "",
+    type = "",
+    page = 1,
+}:   SearchOptions): Promise<ArtworkList> {
     const params = new URLSearchParams({
         has_image: "1",
         limit: String(PAGE_SIZE),
@@ -51,6 +61,7 @@ export async function searchArtworks(query: string, page: number = 1): Promise<A
         fields: FIELDS,
     });
     if (query) params.set("q", query);
+    if (type) params.set("type", type);
     
     const res = await fetch(`${BASE_URL}/artworks/?${params}`);
     if (!res.ok) throw new Error(`API error: ${res.status}`);
