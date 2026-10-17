@@ -1,4 +1,5 @@
 import { NavLink, Outlet } from "react-router";
+import { useGalleryStore } from "../store/galleryStore";
 
 const links = [
     { to: "/", label: "Explore" },
@@ -8,6 +9,7 @@ const links = [
 ];
 
 function Layout() {
+    const savedCount = useGalleryStore((s) => s.items.length);
     return (
         <div className="min-h-screen bg-stone-50 text-stone-900">
             <header className="border-b border-stone-200 bg-white">
@@ -28,6 +30,7 @@ function Layout() {
                                 }
                             >
                                 {link.label}
+                                {link.to === "/my-gallery" && savedCount > 0 && ` (${savedCount})`}
                             </NavLink>
                         ))}
                     </div>

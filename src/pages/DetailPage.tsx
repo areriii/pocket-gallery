@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link, useParams } from "react-router";
 import { getArtwork } from "../api/cma";
+import { useGalleryStore } from "../store/galleryStore";
 
 function DetailPage() {
   const { id } = useParams();
@@ -11,15 +12,19 @@ function DetailPage() {
     enabled: !!id,
   });
 
-  if (isPending) return <p className="p-8">กำลังโหลด...</p>;
-  if (isError) {
-    return (
-      <main className="mx-auto max-w-6xl p-8">
-        <p className="text-red-600">ไม่พบผลงานนี้ ({error.message})</p>
-        <Link to="/" className="mt-4 inline-block underline">← กลับหน้าหลัก</Link>
-      </main>
-    );
-  }
+    const isSaved = useGalleryStore((s) => s.items.some((i) => i.id === Number(id)));
+    const save = useGalleryStore((s) => s.save);
+    const remove = useGalleryStore((s) => s.remove);
+
+    if (isPending) return <p className="p-8">กำลังโหลด...</p>;
+    if (isError) {
+        return (
+        <main className="mx-auto max-w-6xl p-8">
+            <p className="text-red-600">ไม่พบผลงานนี้ ({error.message})</p>
+            <Link to="/" className="mt-4 inline-block underline">← กลับหน้าหลัก</Link>
+        </main>
+        );
+    }
 
   const facts = [
     { label: "ปี", value: art.date },
@@ -65,12 +70,16 @@ function DetailPage() {
               ))}
           </dl>
 
-          <button
-            disabled
-            className="mt-6 w-full rounded-lg bg-red-700 px-4 py-3 font-semibold text-white opacity-50"
+        <button
+            onClick={() => (isSaved ? remove(art.id) : save(art))}
+            className={
+              isSaved
+                ? "mt-6 w-full rounded-lg border-2 border-red-700 bg-white px-4 py-3 font-semibold text-red-700"
+                : "mt-6 w-full rounded-lg bg-red-700 px-4 py-3 font-semibold text-white hover:bg-red-800"
+            }
           >
-            ☆ บันทึกลง My Gallery (เร็วๆ นี้)
-          </button>
+            {isSaved ? "★ บันทึกแล้ว (กดอีกครั้งเพื่อลบ)" : "☆ บันทึกลง My Gallery"}
+        </button>
 
           {art.description && (
             <p className="mt-6 leading-relaxed text-stone-700">{art.description}</p>
