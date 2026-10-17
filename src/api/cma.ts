@@ -114,3 +114,55 @@ export async function getArtwork(id: string): Promise<ArtworkDetail> {
     museumUrl: raw.url ?? null,
   };
 }
+
+// ===== สำหรับเกม Guess the Year =====
+export type GuessArtwork = Artwork & {
+  yearStart: number;
+  yearEnd: number;
+};
+
+type CmaGuessArtwork = CmaArtwork & { creation_date_latest: number | null };
+
+const GUESS_FILTERS = {
+  type: "Painting",
+  has_image: "1",
+  created_after: "1400",
+  created_before: "2000",
+};
+
+export async function getGuessArtworks(count = 5): Promise<GuessArtwork[]> {
+  // 1) ถามก่อนว่ามีทั้งหมดกี่ชิ้น (ขอแค่ 1 ชิ้น เพื่อดู info.total)
+  const countParams = new URLSearchParams({ ...GUESS_FILTERS, limit: "1", fields: "id" });
+  const countRes = await fetch(`${BASE_URL}/artworks/?${countParams}`);
+  if (!countRes.ok) throw new Error(`API error: ${countRes.status}`);
+  const total: number = (await countRes.json()).info.total;
+
+  // 2) สุ่มตำแหน่งเริ่ม แล้วดึงมา 100 ชิ้น
+  const skip = Math.floor(Math.random() * Math.max(1, total - 100));
+  const params = new URLSearchParams({
+    ...GUESS_FILTERS,
+    limit: "100",
+    skip: String(skip),
+    fields: `${FIELDS},creation_date_latest`,
+  });
+  const res = await fetch(`${BASE_URL}/artworks/?${params}`);
+  if (!res.ok) throw new Error(`API error: ${res.status}`);
+  const json: { data: CmaGuessArtwork[] } = await res.json();
+
+  // 3) เก็บเฉพาะงานที่มีรูป และระบุปีชัด (ช่วงห่างไม่เกิน 5 ปี)
+  const candidates = json.data.filter(
+    (a) =>
+      a.creation_date_earliest !== null &&
+      a.creation_date_latest !== null &&
+      a.creation_date_latest - a.creation_date_earliest <= 5 &&
+      a.images?.web?.url
+  );
+
+  // 4) สลับลำดับแบบสุ่ม แล้วเลือกมา count ชิ้น
+  const shuffled = [...candidates].sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, count).map((a) => ({
+    ...toArtwork(a),
+    yearStart: a.creation_date_earliest!,
+    yearEnd: a.creation_date_latest!,
+  }));
+}
