@@ -1,4 +1,4 @@
-const BASE_USL = "https://openaccess-api.clevelandart.org/api";
+const BASE_URL = "https://openaccess-api.clevelandart.org/api";
 const PAGE_SIZE = 24;
 const FIELDS = "id,title,creators,creation_date,creation_date_earliest,images";
 
@@ -24,7 +24,7 @@ type CmaArtwork = {
     creators: { description: string }[];
     creation_date: string | null;
     creation_date_earliest: number | null;
-    images: { web?: { url: string } } | null;
+    images: { web?: { url: string }; print?: { url: string } } | null;
 }
 
 type CmaListResponse = {
@@ -52,7 +52,7 @@ export async function searchArtworks(query: string, page: number = 1): Promise<A
     });
     if (query) params.set("q", query);
     
-    const res = await fetch(`${BASE_USL}/artworks/?${params}`);
+    const res = await fetch(`${BASE_URL}/artworks/?${params}`);
     if (!res.ok) throw new Error(`API error: ${res.status}`);
     const json: CmaListResponse = await res.json();
 
@@ -63,3 +63,43 @@ export async function searchArtworks(query: string, page: number = 1): Promise<A
     };
 }
 
+// ข้อมูลเต็มสำหรับหน้า Detail = ข้อมูลพื้นฐาน + ฟิลด์เพิ่มเติม
+export type ArtworkDetail = Artwork & {
+  type: string | null;
+  technique: string | null;
+  measurements: string | null;
+  department: string | null;
+  description: string | null;
+  didYouKnow: string | null;
+  printImageUrl: string | null;
+  museumUrl: string | null;
+};
+
+type CmaArtworkDetail = CmaArtwork & {
+  type: string | null;
+  technique: string | null;
+  measurements: string | null;
+  department: string | null;
+  description: string | null;
+  did_you_know: string | null;
+  url: string | null;
+};
+
+export async function getArtwork(id: string): Promise<ArtworkDetail> {
+  const res = await fetch(`${BASE_URL}/artworks/${id}`);
+  if (!res.ok) throw new Error(`API error: ${res.status}`);
+  const json: { data: CmaArtworkDetail } = await res.json();
+  const raw = json.data;
+
+  return {
+    ...toArtwork(raw),
+    type: raw.type ?? null,
+    technique: raw.technique ?? null,
+    measurements: raw.measurements ?? null,
+    department: raw.department ?? null,
+    description: raw.description ?? null,
+    didYouKnow: raw.did_you_know ?? null,
+    printImageUrl: raw.images?.print?.url ?? null,
+    museumUrl: raw.url ?? null,
+  };
+}
